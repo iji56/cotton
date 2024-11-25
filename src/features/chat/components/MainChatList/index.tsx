@@ -1,15 +1,14 @@
-import { SMCL } from "./MainChatList.style";
-import MainChatCard from "../MainChatCard";
-import { Image, Text, View } from "react-native";
-import { reduxSelect } from "../../../../types/reduxHooks";
-import { ChatMainProps, ProfilePictureType } from "../../types/chatMain";
-import { timeSince } from "@/utils/formatDate";
-import { normalizeWhitespaces } from "@/utils/formSanitization";
-import { keywords } from "../../utils/keywords";
+import { SMCL } from './MainChatList.style';
+import MainChatCard from '../MainChatCard';
+import { Image, Text, View } from 'react-native';
+import { reduxSelect } from '../../../../types/reduxHooks';
+import { ChatMainProps, ProfilePictureType } from '../../types/chatMain';
+import { timeSince } from '@/utils/formatDate';
+import { keywords } from '../../utils/keywords';
 
 const MainChatList = ({ data }: ChatMainProps) => {
-  let currentUser = reduxSelect((state) => state.usermeta.user_name);
-  let userId = reduxSelect((state) => state.usermeta.id);
+  let currentUser = reduxSelect(state => state.usermeta.user_name);
+  let userId = reduxSelect(state => state.usermeta.id);
 
   const getValidImage = (images: ProfilePictureType[]) => {
     // Find the first image that starts with 'https'
@@ -21,39 +20,57 @@ const MainChatList = ({ data }: ChatMainProps) => {
 
   return (
     <View style={SMCL.container}>
-      {data.length > 0 ? data.map((item, index) => {
+      {data.length > 0 ? (
+        data.map((item, index) => {
+          console.log(item);
+          const chatUser =
+            item.usermeta_a.user_name === currentUser
+              ? item.usermeta_b.user_name
+              : item.usermeta_a.user_name;
+          const name = chatUser || 'unknown user';
 
-        const chatUser = item.usermeta_a.user_name === currentUser
-          ? item.usermeta_b.user_name
-          : item.usermeta_a.user_name;
-        const name = chatUser || 'unknown user';
+          const receiverId =
+            item.user_a !== currentUser ? item.user_b : item.user_a;
 
-        const picture = item.usermeta_a.user_name === currentUser
-          ? getValidImage(item.usermeta_b?.images!)
-          : getValidImage(item.usermeta_a?.images!);
+          const picture =
+            item.usermeta_a.user_name === currentUser
+              ? getValidImage(item.usermeta_b?.images!)
+              : getValidImage(item.usermeta_a?.images!);
 
-        const message = item.newest_message?.[0]?.message_body || ''
+          const message = item.newest_message?.[0]?.message_body || '';
 
-        const sender = item.newest_message?.[0]?.user_id === userId;
+          const sender = item.newest_message?.[0]?.user_id === userId;
 
-        let elapsedTime = '';
+          let elapsedTime = '';
 
-        if (item.newest_message?.[0]?.created_at) {
-          elapsedTime = timeSince(item.newest_message[0].created_at);
-        }
-        return <MainChatCard chatID={item.id} name={name} message={message} key={index} elapsedTime={elapsedTime} picture={picture} last={index === data.length - 1} sender={sender} />
-      }) :
+          if (item.newest_message?.[0]?.created_at) {
+            elapsedTime = timeSince(item.newest_message[0].created_at);
+          }
+          return (
+            <MainChatCard
+              chatID={item.id}
+              name={name}
+              message={message}
+              receiverId={receiverId}
+              key={index}
+              elapsedTime={elapsedTime}
+              picture={picture}
+              last={index === data.length - 1}
+              sender={sender}
+            />
+          );
+        })
+      ) : (
         <View style={SMCL.inputContainer}>
           <Image
             source={require('../../assets/chatImg.png')}
             style={SMCL.image}
           />
-          <Text style={SMCL.descriptionText}>
-            {keywords.noChat}
-          </Text>
-        </View>}
+          <Text style={SMCL.descriptionText}>{keywords.noChat}</Text>
+        </View>
+      )}
     </View>
-  )
-}
+  );
+};
 
 export default MainChatList;

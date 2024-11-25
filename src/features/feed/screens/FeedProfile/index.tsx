@@ -1,4 +1,12 @@
-import { FlatList, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  FlatList,
+  Image,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FeedHeader from '../../components/FeedHeader';
 import { getUserListings } from '@/features/profile/api/getUserListings';
@@ -29,6 +37,7 @@ import { reportListing } from '../../api/reportListing';
 import { reportUser } from '../../api/reportUser';
 import { unblockUser } from '../../api/unblockUser';
 import { blockUser } from '../../api/blockUser';
+import { getUserDetail } from '../../api/getUserDetail';
 
 const FeedProfile = ({ route }: { route: { params: { userID: string } } }) => {
   const { userID } = route.params;
@@ -53,7 +62,7 @@ const FeedProfile = ({ route }: { route: { params: { userID: string } } }) => {
   const [selectedReport, setSelectedReport] = useState('');
   const [selectedReportText, setSelectedReportText] = useState('');
   const [snapPoint, setSnapPoint] = useState<number | string>(1);
-  const [selectedItem, setSelectedItem] = useState<UserListingRow | null>(null)
+  const [selectedItem, setSelectedItem] = useState<UserListingRow | null>(null);
   const ref = useRef<any>();
 
   const getProfile = async () => {
@@ -61,7 +70,7 @@ const FeedProfile = ({ route }: { route: { params: { userID: string } } }) => {
     try {
       let listings = await getUserListings(userID);
       let follows = await getUserFollows(userID);
-      const userDetail = await getUsermeta(userID);
+      const userDetail = await getUserDetail(userID, currentUser!);
       if (listings) setUserListings(listings);
       if (follows) setUserFollows(follows);
       if (userDetail) {
@@ -74,8 +83,9 @@ const FeedProfile = ({ route }: { route: { params: { userID: string } } }) => {
           bio: userDetail.bio || '',
           itemCount: userListings.length,
           followerCount: userFollows.length,
-          blocked: blocked
+          blocked: blocked,
         }));
+        setBlocked(userDetail?.is_blocked || false)
       }
     } catch (error) {
       console.log('Error getting user details : ', error);
@@ -101,82 +111,90 @@ const FeedProfile = ({ route }: { route: { params: { userID: string } } }) => {
   };
 
   const handleEllipse = (item: any) => {
-    console.log("Selected listing : ", item, item?.listing_id, item?.user_id)
-    setSelectedItem(item)
+    console.log('Selected listing : ', item);
+    setSelectedItem(item);
     handleBottomSheet('70%');
-  }
+  };
 
   const handleReport = async () => {
-    handleBottomSheet('80%')
-    let resposnse = selectedItem ?
-      await reportListing(currentUser!, selectedItem?.listing_id!, selectedItem?.user_id!, selectedReport, selectedReportText) :
-      await reportUser();
+    handleBottomSheet('80%');
+    let resposnse = await reportListing(
+      currentUser!,
+      selectedItem?.listing_id!,
+      selectedItem?.user_id!,
+      selectedReport,
+      selectedReportText,
+    );
+    console.log('resposnse: ', resposnse);
+    // await reportUser();
     if (resposnse?.startsWith('Error')) {
-      errorToast(resposnse)
+      errorToast(resposnse);
     } else {
-      setUserListings(userListings => userListings.filter(item => item.listing_id !== selectedItem?.listing_id))
-      successToast(keywords.reportMessage)
+      setUserListings(userListings =>
+        userListings.filter(
+          item => item.listing_id !== selectedItem?.listing_id,
+        ),
+      );
+      successToast(keywords.reportMessage);
     }
-  }
+  };
 
   const handleBottomSheet = (number?: string) => {
-    setSelectedItem(null)
-    setSnapPoint(number || '25%')
-    ref.current?.snapToIndex(1)
-  }
+    setSnapPoint(number || '25%');
+    ref.current?.snapToIndex(1);
+  };
 
   const handleReportUser = () => {
-    handleBottomSheet("70%")
-  }
+    handleBottomSheet('70%');
+  };
 
   const handleRestriction = () => {
     if (restricted) {
       successToast(keywords.restrictMessage);
     } else {
-      successToast(keywords.unrestrictMessage)
+      successToast(keywords.unrestrictMessage);
     }
-    handleBottomSheet("1%")
-    setRestricted(!restricted)
-  }
+    handleBottomSheet('1%');
+    setRestricted(!restricted);
+  };
   const handleBlockUser = () => {
-    handleBottomSheet("65%")
-  }
+    handleBottomSheet('65%');
+  };
 
   const handleSelectReport = (value: string) => {
-    setSelectedReport(value)
-  }
+    setSelectedReport(value);
+  };
 
   const handleBlock = async () => {
-
     if (blocked) {
-      const response = await unblockUser();
-      if (response?.startsWith("Error")) {
-        errorToast(response)
+      const response = await unblockUser(currentUser!, profileData.user_id);
+      if (response?.startsWith('Error')) {
+        errorToast(response);
       } else {
-        successToast(`${profileData.user_name}${keywords.blockMessage}`)
+        successToast(`${profileData.user_name}${keywords.unblockMessage}`);
       }
     } else {
       const response = await blockUser(profileData.user_id, currentUser!);
-      if (response?.startsWith("Error")) {
-        errorToast(response)
+      if (response?.startsWith('Error')) {
+        errorToast(response);
       } else {
-        successToast(`${profileData.user_name}${keywords.unblockMessage}`)
+        successToast(`${profileData.user_name}${keywords.blockMessage}`);
       }
     }
-    setBlocked(!blocked)
-    handleBottomSheet('1%')
-  }
+    setBlocked(!blocked);
+    handleBottomSheet('1%');
+  };
 
   const handleBlockAndReport = () => {
     // call block and report api
-    setBlocked(true)
-    handleBottomSheet('1%')
-    successToast(`${profileData.user_name}${keywords.blockMessage}`)
+    setBlocked(true);
+    handleBottomSheet('1%');
+    successToast(`${profileData.user_name}${keywords.blockMessage}`);
 
     setTimeout(() => {
       successToast(keywords.reportMessage);
-    }, 3000)
-  }
+    }, 3000);
+  };
 
   return (
     <View
@@ -202,7 +220,13 @@ const FeedProfile = ({ route }: { route: { params: { userID: string } } }) => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           showsVerticalScrollIndicator={false}>
-          <FeedHeader headerType='profile' handleEllipe={handleBottomSheet} />
+          <FeedHeader
+            headerType="profile"
+            handleEllipe={() => {
+              setSelectedItem(null);
+              handleBottomSheet();
+            }}
+          />
           <ProfileBio
             usermeta={profileData}
             isPublicProfile={currentUser === userID ? false : true}
@@ -211,76 +235,142 @@ const FeedProfile = ({ route }: { route: { params: { userID: string } } }) => {
           <PostList userListings={userListings} handleEllipse={handleEllipse} />
         </ScrollView>
       )}
-      <BottomSheets snapPoint={snapPoint} setSnapPoint={setSnapPoint} bottomSheetRef={ref} handleSheetChanges={(index: number) => { }}>
+      <BottomSheets
+        snapPoint={snapPoint}
+        setSnapPoint={setSnapPoint}
+        bottomSheetRef={ref}
+        handleSheetChanges={(index: number) => {}}>
         {snapPoint === '25%' ? (
-          <View >
+          <View>
             <TouchableOpacity style={SFP.button} onPress={handleRestriction}>
-              <Text style={SFP.buttonText}>{restricted ? keywords.unrestrict : keywords.restrict}</Text>
+              <Text style={SFP.buttonText}>
+                {restricted ? keywords.unrestrict : keywords.restrict}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity style={SFP.button} onPress={handleBlockUser}>
-              <Text style={SFP.buttonText}>{blocked ? keywords.unblock : keywords.block}</Text>
+              <Text style={SFP.buttonText}>
+                {blocked ? keywords.unblock : keywords.block}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[SFP.button, { borderBottomWidth: 0 }]} onPress={handleReportUser}>
+            <TouchableOpacity
+              style={[SFP.button, { borderBottomWidth: 0 }]}
+              onPress={handleReportUser}>
               <Text style={SFP.buttonText}>{keywords.report}</Text>
             </TouchableOpacity>
           </View>
-        ) :
-          snapPoint === '70%' ?
-            <FlatList
-              data={reportLists}
-              keyExtractor={(item, index) => index.toString()}
-              ListHeaderComponent={<Text style={SFP.heading}>{keywords.reasonToReportAccount}</Text>}
-              renderItem={({ item, index }) => (
-                <TouchableOpacity key={index} style={[SFP.item, { borderTopWidth: index === 0 ? .3 : 0 }]} onPress={() => handleSelectReport(item.value)}>
-                  <Checkbox label='' isChecked={selectedReport === item.value} onClick={() => handleSelectReport(item.value)} borderRadius={20} />
-                  <Text style={SFP.itemText}>{item?.label}</Text>
-                </TouchableOpacity>
-              )}
-              showsVerticalScrollIndicator={false}
-              ListFooterComponent={
-                <>
-                  {selectedReport === "Other" && (
-                    <TextField value={selectedReportText} onChangeText={setSelectedReportText} placeholder={keywords.reasonPlaceholder} multiline style={SFP.input} />
-                  )}
-                  <View style={SFP.bottomButton}>
-                    <Button text={keywords.submit} onPress={handleReport} variant='main' />
-                  </View>
-                </>
-              }
-            />
-            : snapPoint === '65%' ? (
-              <View style={SFP.blockContainer}>
-                <Image source={{ uri: profileData?.user_picture || placeholderPicture }} style={SFP.image} />
-                <Text style={[SFP.heading, { textAlign: 'center' }]}>{keywords.block} {profileData?.user_name}?</Text>
-                <Text style={SFP.label}>{keywords.theyWouldNotAbleToSendMessage}</Text>
-                <Text style={SFP.label}>{keywords.theirListingWontShow}</Text>
-                <Text style={SFP.label}>{keywords.youCanUnblock}</Text>
-                <Text style={[SFP.label, { fontWeight: '600' }]}>{keywords.settingsBlockedAccounts}</Text>
+        ) : snapPoint === '70%' ? (
+          <FlatList
+            data={reportLists}
+            keyExtractor={(item, index) => index.toString()}
+            ListHeaderComponent={
+              <Text style={SFP.heading}>{keywords.reasonToReportAccount}</Text>
+            }
+            renderItem={({ item, index }) => (
+              <TouchableOpacity
+                key={index}
+                style={[SFP.item, { borderTopWidth: index === 0 ? 0.3 : 0 }]}
+                onPress={() => handleSelectReport(item.value)}>
+                <Checkbox
+                  label=""
+                  isChecked={selectedReport === item.value}
+                  onClick={() => handleSelectReport(item.value)}
+                  borderRadius={20}
+                />
+                <Text style={SFP.itemText}>{item?.label}</Text>
+              </TouchableOpacity>
+            )}
+            showsVerticalScrollIndicator={false}
+            ListFooterComponent={
+              <>
+                {selectedReport === 'Other' && (
+                  <TextField
+                    value={selectedReportText}
+                    onChangeText={setSelectedReportText}
+                    placeholder={keywords.reasonPlaceholder}
+                    multiline
+                    style={SFP.input}
+                  />
+                )}
                 <View style={SFP.bottomButton}>
-                  <Button text={blocked ? keywords.unblock : keywords.block} onPress={handleBlock} variant='main' />
+                  <Button
+                    text={keywords.submit}
+                    onPress={handleReport}
+                    variant="main"
+                  />
                 </View>
-                <View style={[SFP.bottomButton, { marginTop: -5 }]}>
-                  <Button text={keywords.blockAndReport} onPress={handleBlockAndReport} variant='secondary' style={{ borderWidth: 0 }} buttonTextColor={palette.red} />
-                </View>
+              </>
+            }
+          />
+        ) : snapPoint === '65%' ? (
+          <View style={SFP.blockContainer}>
+            <Image
+              source={{ uri: profileData?.user_picture || placeholderPicture }}
+              style={SFP.image}
+            />
+            <Text style={[SFP.heading, { textAlign: 'center' }]}>
+              {keywords.block} {profileData?.user_name}?
+            </Text>
+            <Text style={SFP.label}>
+              {keywords.theyWouldNotAbleToSendMessage}
+            </Text>
+            <Text style={SFP.label}>{keywords.theirListingWontShow}</Text>
+            <Text style={SFP.label}>{keywords.youCanUnblock}</Text>
+            <Text style={[SFP.label, { fontWeight: '600' }]}>
+              {keywords.settingsBlockedAccounts}
+            </Text>
+            <View style={SFP.bottomButton}>
+              <Button
+                text={blocked ? keywords.unblock : keywords.block}
+                onPress={handleBlock}
+                variant="main"
+              />
+            </View>
+            <View style={[SFP.bottomButton, { marginTop: -5 }]}>
+              <Button
+                text={keywords.blockAndReport}
+                onPress={handleBlockAndReport}
+                variant="secondary"
+                style={{ borderWidth: 0 }}
+                buttonTextColor={palette.red}
+              />
+            </View>
+          </View>
+        ) : (
+          <View style={SFP.blockContainer}>
+            <Text style={SFP.heading}>
+              {keywords.thanksWeReceivedYourReport}
+            </Text>
+            <View style={SFP.blockBody}>
+              <Text style={SFP.heading}>
+                {keywords.youCanBlock} {profileData?.user_name}
+              </Text>
+              <Image
+                source={{
+                  uri: profileData?.user_picture || placeholderPicture,
+                }}
+                style={SFP.image}
+              />
+              <Text style={[SFP.heading, { textAlign: 'center' }]}>
+                {keywords.block} {profileData?.user_name}?
+              </Text>
+              <Text style={SFP.label}>
+                {keywords.theyWouldNotAbleToSendMessage}
+              </Text>
+              <Text style={SFP.label}>{keywords.theirListingWontShow}</Text>
+              <Text style={SFP.label}>{keywords.youCanUnblock}</Text>
+              <Text style={[SFP.label, { fontWeight: '600' }]}>
+                {keywords.settingsBlockedAccounts}
+              </Text>
+              <View style={SFP.bottomButton}>
+                <Button
+                  text={blocked ? keywords.unblock : keywords.block}
+                  onPress={handleBlock}
+                  variant="main"
+                />
               </View>
-            ) : (
-              <View style={SFP.blockContainer}>
-                <Text style={SFP.heading}>{keywords.thanksWeReceivedYourReport}</Text>
-                <View style={SFP.blockBody}>
-                  <Text style={SFP.heading}>{keywords.youCanBlock} {profileData?.user_name}</Text>
-                  <Image source={{ uri: profileData?.user_picture || placeholderPicture }} style={SFP.image} />
-                  <Text style={[SFP.heading, { textAlign: 'center' }]}>{keywords.block} {profileData?.user_name}?</Text>
-                  <Text style={SFP.label}>{keywords.theyWouldNotAbleToSendMessage}</Text>
-                  <Text style={SFP.label}>{keywords.theirListingWontShow}</Text>
-                  <Text style={SFP.label}>{keywords.youCanUnblock}</Text>
-                  <Text style={[SFP.label, { fontWeight: '600' }]}>{keywords.settingsBlockedAccounts}</Text>
-                  <View style={SFP.bottomButton}>
-                    <Button text={blocked ? keywords.unblock : keywords.block} onPress={handleBlock} variant='main' />
-                  </View>
-                </View>
-              </View>
-            )
-        }
+            </View>
+          </View>
+        )}
       </BottomSheets>
       <Toast config={toastConfig} />
     </View>
