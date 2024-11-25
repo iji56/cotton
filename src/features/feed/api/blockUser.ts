@@ -4,8 +4,8 @@ export const blockUser = async (blockerId: string, userId: string) => {
 
     try {
         const payload = {
-            p_blocker_id: blockerId,
-            p_blocked_id: userId
+            p_blocker_id: userId,
+            p_blocked_id: blockerId
         }
         console.log("block user payload  : ", payload)
 
