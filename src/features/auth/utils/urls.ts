@@ -1,0 +1,2 @@
+export const termsOfUseUrl = 'https://docs.google.com/document/d/1okrQwtXIEI7DMpZY7N7paGwk7hvz0OKau1bOA8Dffqg/edit?usp=drive_web&ouid=109799107515013597261';
+export const privacyPolicyUrl = 'https://docs.google.com/document/d/1VXDCU2k5CKEIhT6V2ITTUWyLIoYgcu-YywuWkrhMVDM/edit?usp=drive_web&ouid=109799107515013597261';

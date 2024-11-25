@@ -1,0 +1,8 @@
+app_identifier("com.raxapp.ios") # The bundle identifier of your app
+apple_id("matthew_hernandez94@icloud.com") # Your Apple Developer Portal username
+
+itc_team_id("125617605") # App Store Connect Team ID
+team_id("6RSY2UBD7M") # Developer Portal Team ID
+
+# For more information about the Appfile, see:
+#     https://docs.fastlane.tools/advanced/#appfile
